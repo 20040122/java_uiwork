@@ -15,7 +15,10 @@ public class ECommerceApp extends JFrame {
     private DefaultListModel<Product> cartListModel;
     private Connection connection;
 
+    private SimpleDateFormat timeFormat;
     private CartDao cartDao;
+
+
     public ECommerceApp() {
         try {
             Class.forName("com.mysql.jdbc.Driver");
@@ -53,12 +56,7 @@ public class ECommerceApp extends JFrame {
         cartJList.setFont(new Font("Microsoft YaHei", Font.BOLD, 17));
 
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        // 生成当前日期时间的字符串
-        String tmValue = dateFormat.format(new Date());
-        // 创建按钮和事件处理程序
-
-
+        // 创建按钮
         JButton addButton = new JButton("添加至购物车");
         customizeButton(addButton);
         addButton.addActionListener(new ActionListener() {
@@ -67,13 +65,13 @@ public class ECommerceApp extends JFrame {
                 List<Product> selectedProducts = productJList.getSelectedValuesList();
                 for (Product product : selectedProducts) {
                     cartListModel.addElement(product);
-                    cartDao.addToCartDatabase(product.getId(), product.getName(),tmValue);
+                    cartDao.addToCartDatabase(product.getId(), product.getName(), getCurrentTime());
                 }
             }
         });
 
 
-        JButton removeButton = new JButton("移除购物车");
+        JButton removeButton = new JButton("从购物车移除");
         customizeButton(removeButton);
         removeButton.addActionListener(new ActionListener() {
             @Override
@@ -89,6 +87,34 @@ public class ECommerceApp extends JFrame {
 
         JButton checkoutSelectedButton = new JButton("结算");
         customizeButton(checkoutSelectedButton);
+
+
+        // 创建布局
+        // 产品列表面板
+        JPanel productPanel = new JPanel(new BorderLayout());
+        productPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        productPanel.add(new JLabel("商品列表", SwingConstants.CENTER), BorderLayout.NORTH);
+        productPanel.add(new JScrollPane(productJList), BorderLayout.CENTER);
+
+        //按钮面板
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.add(addButton);
+        buttonPanel.add(removeButton);
+        buttonPanel.add(checkoutSelectedButton);
+
+        //购物车
+        JPanel cartPanel = new JPanel(new BorderLayout());
+        cartPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        cartPanel.add(new JLabel("购物车列表", SwingConstants.CENTER), BorderLayout.NORTH);
+        cartPanel.add(new JScrollPane(cartJList), BorderLayout.CENTER);
+        cartPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        // 主面板
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.add(productPanel, BorderLayout.WEST);
+        mainPanel.add(cartPanel, BorderLayout.CENTER);
+
+
         checkoutSelectedButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -96,47 +122,27 @@ public class ECommerceApp extends JFrame {
                 if (selectedProducts.isEmpty()) {
                     JOptionPane.showMessageDialog(null, "No selected products.", "Error", JOptionPane.ERROR_MESSAGE);
                 } else {
-                    double total = 0;
-                    for (Product product : selectedProducts) {
-                        total += product.getPrice();
-                    }
-                    DecimalFormat decimalFormat = new DecimalFormat("#0.00");
-                    String formattedTotal = decimalFormat.format(total);
-                    JOptionPane.showMessageDialog(null, "Total: $" + formattedTotal, "Checkout", JOptionPane.INFORMATION_MESSAGE);
-                    for (Product product : selectedProducts) {
-                        cartListModel.removeElement(product);
-                        cartDao.removeFromCartDatabase(product.getId());
-                        cartDao.resetCartId();
+                    int choice = JOptionPane.showConfirmDialog(null, "是否要结算？", "确认结算", JOptionPane.YES_NO_OPTION);
+                    if (choice == JOptionPane.YES_OPTION) {
+                        double total = 0;
+                        for (Product product : selectedProducts) {
+                            total += product.getPrice();
+                        }
+                        DecimalFormat decimalFormat = new DecimalFormat("#0.00");
+                        String formattedTotal = decimalFormat.format(total);
+                        JOptionPane.showMessageDialog(null, "Total: $" + formattedTotal, "Checkout", JOptionPane.INFORMATION_MESSAGE);
+                        for (Product product : selectedProducts) {
+                            cartListModel.removeElement(product);
+                            cartDao.removeFromCartDatabase(product.getId());
+                            cartDao.resetCartId();
+                        }
+                        // 弹出支付方式选择界面
+                        JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(mainPanel);
+                        new PaymentDialog(parentFrame);
                     }
                 }
             }
         });
-
-
-
-        // 创建布局
-        JPanel productPanel = new JPanel(new BorderLayout());
-        productPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        productPanel.add(new JLabel("商品列表", SwingConstants.CENTER), BorderLayout.NORTH);
-        productPanel.add(new JScrollPane(productJList), BorderLayout.CENTER);
-
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        buttonPanel.add(addButton);
-        buttonPanel.add(removeButton);
-        buttonPanel.add(checkoutSelectedButton);
-
-
-        JPanel cartPanel = new JPanel(new BorderLayout());
-        cartPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        cartPanel.add(new JLabel("购物车列表", SwingConstants.CENTER), BorderLayout.NORTH);
-        cartPanel.add(new JScrollPane(cartJList), BorderLayout.CENTER);
-        cartPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.add(productPanel, BorderLayout.WEST);
-        mainPanel.add(cartPanel, BorderLayout.CENTER);
 
 
         // 设置窗口属性
@@ -147,6 +153,8 @@ public class ECommerceApp extends JFrame {
         setContentPane(mainPanel);
         setVisible(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+
         // 添加窗口关闭事件处理程序
         addWindowListener(new WindowAdapter() {
             @Override
@@ -158,15 +166,26 @@ public class ECommerceApp extends JFrame {
     }
 
 
+
+    // 自定义按钮样式
     private void customizeButton(JButton button) {
         button.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
-        button.setBackground(new Color(0, 0, 0));
-        button.setForeground(Color.RED);
+        button.setBackground(new Color(255,255,255 ));
+        button.setForeground(Color.BLACK);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
     }
 
 
+    // 获取当前时间
+    private String getCurrentTime() {
+        if (timeFormat == null) {
+            timeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        }
+        return timeFormat.format(new Date());
+    }
+
+    //数据参数化
     private void initializeProductList() {
         // 从CSV文件读取商品数据
         try (BufferedReader reader = new BufferedReader(new FileReader("src/data.csv"))) {
@@ -187,6 +206,9 @@ public class ECommerceApp extends JFrame {
             e.printStackTrace();
         }
     }
+
+
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
@@ -196,6 +218,3 @@ public class ECommerceApp extends JFrame {
         });
     }
 }
-
-
-
