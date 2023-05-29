@@ -14,7 +14,6 @@ public class ECommerceApp extends JFrame {
     private JList<Product> productJList;
     private DefaultListModel<Product> cartListModel;
     private Connection connection;
-
     private SimpleDateFormat timeFormat;
     private CartDao cartDao;
 
@@ -58,7 +57,9 @@ public class ECommerceApp extends JFrame {
 
         // 创建按钮
         JButton addButton = new JButton("添加至购物车");
+        //定义按钮格式
         customizeButton(addButton);
+        //重写ActionListener接口中的actionPerformed方法
         addButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
