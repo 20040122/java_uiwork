@@ -59,7 +59,7 @@ public class ECommerceApp extends JFrame {
         JButton addButton = new JButton("添加至购物车");
         //定义按钮格式
         customizeButton(addButton);
-        //重写ActionListener接口中的actionPerformed方法
+        //匿名内部类与class listener implements ActionListener(重写actionPerformed等价)
         addButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
